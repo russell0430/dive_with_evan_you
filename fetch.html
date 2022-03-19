@@ -1,0 +1,115 @@
+<script src="https://unpkg.com/vue@next"></script>
+<!-- template for the version_1 -->
+<!-- <div id="app">
+  <div v-if="isPending">loading...</div>
+  <div v-else-if="data">{{data}}</div>
+  <div v-else-if="error">something went wrong! :{{error.message}}</div>
+</div> -->
+<div id="app"></div>
+
+<script>
+  const { createApp, ref ,watchEffect} = Vue;
+  function useFetch(url) {
+    const data = ref(null);
+    const error = ref(null);
+    const isPending = ref(true);
+
+    fetch(url)
+      .then((res) => res.json())
+      .then((_data) => {
+        setTimeout(() => {
+          data.value = _data;
+          isPending.value = false;
+        }, 10000);
+      })
+      .catch((err) => {
+        error.value = err;
+        isPending = false;
+      });
+    return {
+      data,
+      error,
+      isPending,
+    };
+  }
+  const App = {
+    setup() {
+      const { data, error, isPending, watchEffect } = useFetch(
+        `https://jsonplaceholder.typicode.com/todos/1`
+      );
+      return { data, error, isPending };
+    },
+  };
+  //if we want to get data according to the props
+  //the first intuition is to put prop into the url
+  //but evan handle this problem in a splendid way
+  //here are as fellow
+
+  // version_2
+  function useFetch_2(getUrl) {
+    const data = ref(null);
+    const error = ref(null);
+    const isPending = ref(true);
+    watchEffect(() => {
+      isPending.value = true;
+      data.value = null;
+      error.value = null;
+      fetch(getUrl()) //here prop can be watched and called immediately
+        .then((res) => res.json())
+        .then((_data) => {
+          data.value = _data;
+          isPending.value = false;
+        })
+        .catch((err) => {
+          error.value = err;
+          isPending = false;
+        });
+    });
+
+    return {
+      data,
+      error,
+      isPending,
+    };
+  }
+  const Post = {
+    props:['id'],//important,and i may find out the solutiob to the problem of the first chapter
+    setup(props) {
+      console.log(props);
+
+      const { data, error, isPending } = useFetch_2(
+        () => `${props.id}`
+        //is called inside watchEffect
+      );
+      //pass a function that makes it latter for the watchEffect
+
+      // another version(3) a small upgrade
+      // const { data, error, isPending }=usePost(()=>props.id);
+      return { data, error, isPending };
+    },
+    template: `
+    <div v-if="isPending">loading...</div>
+    <div v-else-if="data">{{data}}</div>
+    <div v-else-if="error">something went wrong! :{{error.message}}</div>`,
+  };
+  //for post property to setup
+  const App_2 = {
+    components: {
+      Post,
+    },
+    template: `<div><button @click="id++">change ID</button>
+    <Post :id="id"/></div>`,
+    data() {
+      return {
+        id: 1,
+      };
+    },
+  };
+  // version_3 a more composable way
+  function usePost(getId){
+    return useFetch_2(()=>`https://jsonplaceholder.typicode.com/todos/${getId()}`);
+  }
+  // use it like this
+  // usePost(()=>props.id); in the function setup
+  createApp(App_2).mount("#app");
+</script>

@@ -1,0 +1,140 @@
+<script>
+  let activeEffect;
+  class Dep {
+    subscribers = new Set();
+
+    get value() {
+      this.depend();
+      return this._value;
+    }
+    set value(value) {
+      this._value = value;
+      this.notify();
+      return this._value;
+    }
+    depend() {
+      if (activeEffect) {
+        this.subscribers.add(activeEffect);
+      }
+    }
+
+    notify() {
+      this.subscribers.forEach((effect) => {
+        effect();
+      });
+    }
+  }
+
+  function watchEffect(effect) {
+    activeEffect = effect; //for thenext step =>depend
+    effect();
+    activeEffect = null;
+  }
+
+  //from here begin
+
+  //vue@2
+  //can only convert the key that exists,
+  //and use value in closure in the function of forEach
+  //make it possible for function watchEffect to track
+  const reactiveHandlers_V2 = {
+    get() {
+      dep.depend();
+      return value;
+    },
+    set(newValue) {
+      value = newValue;
+      dep.notify();
+    },
+  };
+
+  function reactive_V2(raw) {
+    Object.keys(raw).forEach((key) => {
+      const dep = new Dep();
+      let value = raw[key];
+
+      Object.defineProperty(raw, key, reactiveHandlers_V2);
+    });
+    return raw;
+  }
+
+  //vue@3 with es6,we can use Proxy rather than defineProperty
+  const targetMap = new WeakMap();
+  //a weakmap 1.targetis a object
+  //          2.if the key becomes no longer accessible,
+  //            the target can be garbage collected
+  //          3.but weakMap can not be iterated over by key
+
+  //to exact code getting dep from global weakMap from reactiveHandlers
+  //a new function is here
+
+  function getDep(target, key) {
+    let depsForTarget = targetMap.get(target);
+    if (!depsForTarget) {
+      depsForTarget = new Map();
+      targetMap.set(target, depsForTarget);
+    }
+    let dep = depsForTarget.get(key);
+    if (!dep) {
+      dep = new Dep();
+      depsForTarget.set(key, dep);
+    }
+    return dep;
+  }
+  const reactiveHandlers_V3 = {
+    get(target, key, receiver) {
+      // // question 1,where to store dep
+      // // v2 store it in a clousure
+      // // v3 store it in a global map
+      // let depsForTarget=targetMap.get(target);
+      // if(!depsForTarget){
+      //   depsForTarget=new Map();
+      //   targetMap.set(target,depsMap);
+      // }
+      // let dep=depsMap.get(key);
+      // if(!dep){
+      //   dep=new Dep();
+      //   depsMap.set(key,dep);
+      // }
+      //all code extract to the function above
+      let dep = getDep(target, key);
+      dep.depend();
+      return Reflect.get(target, key, receiver);
+      //guarantee all case work consistently
+      // return target[key];
+    },
+    set(target, key, value, receiver) {
+      let dep = getDep(target, key);
+      const result = Reflect.set(target, key, value, receiver);
+      dep.notify();
+      return result;
+      //set in proxy needs ti return a boolean to indicate
+      //whether this operation has succeeded or not
+    },
+  };
+  function reactive_V3(raw) {
+    return new Proxy(raw, reactiveHandlers_V3);
+  }
+  const state = reactive_V3({
+    count: 0,
+  });
+  watchEffect(() => {
+    console.log(state.count);
+    console.log(state.msg);
+    //when apply to a prop that not exist,
+    //the proxy still work,set and get traps still triggered for the property
+    //try to change the value of msg in console
+    //you will find th state.msg is reactive too
+    //vue3 can detect new property,because the proxy is on the object instead of object.property
+    //and proxy has other traps,such as has trap('item in obejct' triggered)
+
+    //a special case
+    // Obejct.key(state).forEach(key=>{
+    //   console.log(key)
+    // })
+    // vue@3 this can be tracked,but not in vue@2
+
+    //the proxy works on array as well,but in vue@2 some specail handling should be done
+  });
+  state.count++;
+</script>

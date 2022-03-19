@@ -1,0 +1,49 @@
+<script>
+  import { reactive, watchEffect,watch,ref,computed ,onMounted } from "vue";
+  //a new hook setup,called before everything
+  //in setup you can not acccess to this
+
+
+  //differences between watch and watchEffect
+  //wacthEffect directly takes a function,and run it immediately
+  //and rerun it whenever anything it touched upon changes
+
+  //watch :watch(()=>state.count,(newValue,oldValue)=>{}) source:state.count,callback,
+  //define a source that can be a function that returns something
+  //and another callback.if the result of source has not changed the callabck would not be called
+
+  function useFeature(){
+    onMounted(() => console.log("mounted"));
+  }
+
+  export default {
+    template:"{{event.count}}",
+    props:["id"],
+    setup(props) {
+      const state = reactive({ count: 0 });
+      watchEffect(() => console.log(state.count));
+      //here watchEffect is automatically associated with the component instance
+      //which means when the instance is unmoounted the watchEffect will be stopped
+      useFeature()//same as the line below
+      // onMounted(() => console.log("mounted"));
+    
+
+      const count=ref(0);
+      const plusOne=computed(()=>state.count+1)//computed return a ref
+      watch(count,plusOne,([count,plusOne],[oldCount,oldPlusOne])=>{})
+      //can watch multiple sources
+      return {
+        state,
+        increment: () => {
+          state.count++;
+        },
+        count:ref(0),
+        //template can use it like {{count}}
+      };
+      //can return things that can be available for other options
+      //even for template
+    },
+  };
+  //with such design,you can extract all to a function
+  //and call it in setup,reusable
+</script>

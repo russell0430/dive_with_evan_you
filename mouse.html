@@ -1,0 +1,143 @@
+<script src="https://unpkg.com/vue@next"></script>
+<div id="app"></div>
+
+<script>
+  const { createApp, h, onMounted, onUnmounted, ref } = Vue;
+  const MouseMixin = {
+    data() {
+      return {
+        x: 0,
+        y: 0,
+      };
+    },
+    methods: {
+      update(e) {
+        (this.x = e.pageX), (this.y = e.pageY);
+      },
+    },
+    mounted() {
+      window.addEventListener("mousemove", this.update);
+    },
+    unmounted() {
+      window.removeEventListener("mousemove", this.update);
+    },
+  };
+  const App = {
+    template: `{{x}},{{y}} `,
+    //mixins: [MouseMixin],
+    //mixin 1.name collision
+    //      2.hard to figure out the source of the variables
+    //so high-order component is considered
+  };
+
+  //version_2
+  function withMouse(inner) {
+    return {
+      render() {
+        return h(inner, {
+          x: this.x,
+          y: this.y,
+        });
+      },
+      data() {
+        return {
+          x: 0,
+          y: 0,
+        };
+      },
+      methods: {
+        update(e) {
+          (this.x = e.pageX), (this.y = e.pageY);
+        },
+      },
+      mounted() {
+        window.addEventListener("mousemove", this.update);
+      },
+      unmounted() {
+        window.removeEventListener("mousemove", this.update);
+      },
+    };
+  }
+  const App2 = withMouse({
+    props: ["x", "y"],
+    template: `{{x}},{{y}}`,
+  });
+
+  // version_3
+  // render props in react/scoped slots in vue
+  //define the props directly
+  const Mouse = {
+    data() {
+      return {
+        x: 0,
+        y: 0,
+      };
+    },
+    methods: {
+      update(e) {
+        (this.x = e.pageX), (this.y = e.pageY);
+      },
+    },
+    mounted() {
+      window.addEventListener("mousemove", this.update);
+    },
+    unmounted() {
+      window.removeEventListener("mousemove", this.update);
+    },
+    render() {
+      return (
+        this.$slots.default &&
+        this.$slots.default({
+          x: this.x,
+          y: this.y,
+        })
+        //equal to <slot :x="x" :y="y"/>
+      );
+    },
+  };
+
+  const App_3 = {
+    components: {
+      Mouse,
+    },
+    template: `<Mouse v-slot="{x,y}">{{x}},{{y}}</Mouse>`,
+    // <Mouse v-slot="x,y">
+    //   <Foo v-slot={"x:foo"}>
+    //   </Foo>
+    // </Mouse>
+    //we can clearly spot the source of variable or rename
+  };
+
+  //version_4:with composition Api
+  function useMouse() {
+    const x = ref(0),
+      y = ref(0);
+    const update = (e) => {
+      (x.value = e.pageX), (y.value = e.pageY);
+    };
+    onMounted(() => {
+      window.addEventListener("mousemove", update);
+    });
+    onUnmounted(() => {
+      window.removeEventListener("mousemove", update);
+    });
+    return { x, y };
+  }
+  const App_4 = {
+    setup() {
+      const { x, y } = useMouse();
+      const foo = ref("foo");
+      return { x, y, foo };
+      return{
+        foo,
+        ...useMouse(),
+        //a little ambigious,better explicitly expree the property injected
+      }
+      //you may have other property or something you do not use or rename the attr
+      //so just follow the rule above
+      // return useMouse();
+    },
+    template: `{{x}},{{y}}`,
+  };
+  createApp(App_4).mount("#app");
+</script>

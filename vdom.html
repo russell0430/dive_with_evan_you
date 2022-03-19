@@ -1,0 +1,108 @@
+<div id="app"></div>
+<style>
+  .red {
+    color: red;
+  }
+  .green{
+    color:green;
+  }
+</style>
+<script>
+  function h(tag, props, children) {
+    return { tag, props, children };
+  }
+
+  // take vnode and container
+  function mount(vnode, container) {
+    const { tag, props, children } = vnode;
+    let el = (vnode.el = document.createElement(tag));
+    //store the real dom on the vdom,so,when vdom change,
+    //we can access the real dom
+    if (props) {
+      for (const key in props) {
+        const value = props[key];
+        el.setAttribute(key, value);
+      }
+    }
+    //children is array,but here evan simplify it
+    if (children) {
+      if (typeof children === "string") {
+        el.textContent = children;
+      } else {
+        children.forEach((child) => {
+          mount(child, el); //recur
+        });
+      }
+    }
+    container.appendChild(el);
+  }
+  const vdom = h("div", { class: "red" }, [h("span", null, "hello")]);
+  mount(vdom, document.getElementById("app"));
+
+  const vdom2 = h("div", { class: "green" }, [h("span", null, "changed")]);
+  //old snapshot,new snapshot
+  function patch(n1, n2) {
+    if (n1.tag === n2.tag) {
+      //same as above
+      const el = (n2.el = n1.el);
+      //props
+      //4 conditions n1 has prop or not,n2 has prop or not.
+      const oldProps = n1.props || {};
+      const newProps = n2.props || {};
+      //key that exist
+      for (const key in newProps) {
+        const oldValue = oldProps[key];
+        const newValue = newProps[key];
+        if (newValue !== oldValue) {
+          el.setAttribute(key, newValue);
+        }
+      }
+      // key that not exist in newVdom
+      for (const key in oldProps) {
+        if(!(key in newProps)){
+          el.removeAttribute(key);
+        }
+      }
+
+      //children:string or array
+      const oldChildren=n1.children;
+      const newChildren=n2.children;
+      if(typeof newChildren=== 'string'){
+        if(typeof oldChildren==='string'){
+          el.textContent=newChildren;
+        }
+        else{
+          el.textContent=newChildren;
+        }
+      }else{
+        if(typeof oldChildren==='string'){
+          el.innerHTML='';
+          newChildren.forEach(child=>mount(child,el))
+        }
+        else {
+          //both aray,there are two mode to diff array children
+          //1. key mode <div v-for="item in list" :key="item.id"></div>
+          //2. not mentioned
+          //here just simplify the case ,check the vnode in order and replace
+          //(assumpt they are of the same type at the same position)
+          const commonLength=Math.min(oldChildren.length,newChildren.length);
+          for(let i=0;i<commonLength;i++){
+            patch(oldChildren[i],newChildren[i]);
+          }
+          if(newChildren.length>oldChildren.length){
+            newChildren.slice(oldChildren.length).forEach(child=>{
+              mount(children,el);
+            })
+          }else if(newChildren.length<oldChildren.length){
+            oldChildren.slice(newChildren).forEach(child=>{
+              el.removeChild(child.el);
+            })
+          }
+        }
+      }
+    } else {
+      // replace
+    }
+  }
+  patch(vdom,vdom2);
+</script>

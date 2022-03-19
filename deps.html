@@ -1,0 +1,52 @@
+<script>
+  let activeEffect;
+  class Dep{
+    constructor(value){
+      this._value=value;//hold a value
+      this.subscribers=new Set()
+
+    }
+    get value(){
+      this.depend();
+      return this._value;
+    }
+    set value(value){
+      this._value=value;
+      this.notify();
+      return this._value;
+    }
+    depend(){
+      if(activeEffect){
+        this.subscribers.add(activeEffect);
+      }
+    }
+
+    notify(){
+      this.subscribers.forEach(effect=>{
+        effect();
+      })
+    }
+  }
+
+  function watchEffect(effect){
+    activeEffect=effect;//for thenext step =>depend
+    effect()
+    activeEffect=null;
+  }
+  const dep=new Dep("dep");
+  const ok=new Dep(true);
+  const msg=new Dep("hello")
+  
+  watchEffect(()=>{
+    // console.log(dep.value);
+    //another case,two things to track
+    //but 
+    if(ok.value){
+      console.log(dep.value);
+    }
+
+  })//effect run
+  
+  dep.value="changed";
+  // dep.notify();//effect run again
+</script>

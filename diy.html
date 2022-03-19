@@ -1,0 +1,110 @@
+<script>
+  //   const asyncIterable = {
+
+  //   [Symbol.asyncIterator]() {
+  //     let i=0;
+  //     return {
+  //       next() {
+  //         if (i < 3) {
+  //           return new Promise((resolve)=>{
+  //             setTimeout(()=>{
+  //               resolve({value:i,done:false});
+  //               i++;
+  //             },2000);
+  //           })
+  //         }
+
+  //         return Promise.resolve({ done: true });
+  //       }
+  //     };
+  //   }
+  // };
+
+  // (async function() {
+  //    for await (let num of asyncIterable) {
+  //      console.log(num);
+  //    }
+  // })();
+
+  class LazyMan {
+    constructor(name) {
+      console.log("this is ", name);
+      this.queue = {
+        que: [],
+        record: [],
+        //这里不用箭头函数咋搞this啊
+        [Symbol.asyncIterator]: () => {
+          let i = 0;
+
+          let self = this;
+          return {
+            next: () => {
+              return new Promise((resolve, reject) => {
+                if(i>=self.queue.que.length){
+                  resolve({value:undefined,done:true});
+                }
+                if (typeof self.queue.que[i] === "function" ) {
+                  let res = {
+                    value: null,
+                    done: i >= self.queue.que.length ,
+                  };
+                  res.value = self.queue.que[i](() => {
+                    // console.log("resolve ",i);
+                    resolve(res);
+                    self.queue.record[i] = "1";
+                    i++;
+                  });
+                } else {
+                  reject({
+                    value:
+                      typeof self.queue.que[i] === "function" &&
+                      self.queue.que[i](),
+                    done: true,
+                  });
+                }
+              });
+            },
+          };
+        },
+      };
+      let trig = this.trigger.bind(this);
+      //bind this or the function inside won`t work
+      //or apply triggger in arrow function way
+      // setTimeout(()=>this.trigger(),0);
+      setTimeout(trig, 0);
+    }
+    sleep(time) {
+      this.queue.que.push((callback) => {
+        setTimeout(() => {
+          console.log("sleep ", time);
+          if (typeof callback !== "function")
+            throw new Error("callback not function,not you mistake");
+          callback();
+        }, time);
+        return "sleep " + time + " return";
+      });
+      return this;
+    }
+
+    eat(food) {
+      this.queue.que.push((callback) => {
+        console.log("eat " + food);
+        // typeof callback === "function" && callback();
+        if (typeof callback !== "function")
+          throw new Error("callback not function,not you mistake");
+        callback();
+        return "eat " + food + " return";
+      });
+      return this;
+    }
+    async trigger() {
+      // console.log(this);
+      for await (let num of this.queue) {
+        console.log(num);
+      }
+    }
+  }
+  let person = new LazyMan("HH")
+    .eat("cola")
+ 
+</script>

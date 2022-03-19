@@ -1,0 +1,43 @@
+<script>
+  //in terms of organization of options
+  //when get big,hard to spot the specific feature
+
+  function useFeatureA() {
+    const foo = ref(0);
+    const plusOne = computed(() => foo.value + 1);
+    function incrementFoo() {}
+    watchEffect(() => {});
+    return{
+      foo,
+      plusOne
+    };
+  }
+  export default {
+    template: "{{event.count}}",
+    props: ["id"],
+    data() {
+      return {
+        foo: 1, //feature A
+        bar: 2, //feature B
+        baz: 3, //feature C
+      };
+    },
+    methods: {},
+    setup(props) {
+      //feature A
+      // const foo=ref(0);
+      // const plusOne=computed(()=>foo.value+1);
+      // function incrementFoo(){}
+      // watchEffect(()=>{})
+      //all above can be extract into a function
+      const {foo,plusOne} = useFeatureA();
+      //feature B
+      const {bar}=useFeatureB();
+      //feature C
+      const {baz}=useFeatureC();
+      return {
+        
+      };
+    },
+  };
+</script>

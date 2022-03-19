@@ -1,0 +1,44 @@
+<script src="https://unpkg.com/vue@next"></script>
+<script>
+  const { watchEffect,ref,computed,reactive} = Vue;
+  let r;
+  let state=reactive({a:0});
+  // function computed(getter){
+  //   let result=ref();
+  //   watchEffect(()=>result.value=getter());
+  //   return result;
+  // }
+  r=computed(()=>{
+    console.log("inside called",state.a);
+    return state.a+1;
+  })
+
+  state.a=114;//check if inside called
+  // console.log(r.value);
+  console.log(".....end......",);
+</script>
+const asyncIterable = {
+  [Symbol.asyncIterator]() {
+    return {
+      i: 0,
+      next() {
+        if (this.i < 3) {
+          return new Promise((resolve)=>{
+            setTimeout(()={
+              resolve({value:this.i,done:false});
+              this.i++;
+            },this.i*1000;
+          })
+        }
+
+        return Promise.resolve({ done: true });
+      }
+    };
+  }
+};
+
+(async function() {
+   for await (let num of asyncIterable) {
+     console.log(num);
+   }
+})();
